@@ -162,6 +162,46 @@ class TestValidateCSV(unittest.TestCase):
         self.assertEqual(result["findings"][0]["row"], 3)
         self.assertEqual(result["findings"][0]["column"], "age")
         self.assertEqual(result["findings"][0]["value"], "abc")
+    
+    def test_empty_column_detection(self):
+        file_path = self.create_csv(
+            "empty_column.csv",
+            "name,age\nAlice,\nBob,\n"
+        )
+
+        result = validate_csv(file_path)
+
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["empty_columns"], ["age"])
+
+        empty_rule = next(
+            rule for rule in result["rules"]
+            if rule["rule"] == "empty_columns"
+        )
+        self.assertEqual(empty_rule["status"], "WARNING")
+        self.assertIn("summary", empty_rule)
+        self.assertIn("actionable_message", empty_rule)
+
+    def test_structured_validation_outcome(self):
+        file_path = self.create_csv(
+            "structured_outcome.csv",
+            "name,age\nAlice,abc\n"
+        )
+
+        result = validate_csv(
+            file_path,
+            expected_types={"age": "integer"}
+        )
+
+        type_rule = next(
+            rule for rule in result["rules"]
+            if rule["rule"] == "data_types"
+        )
+
+        self.assertEqual(type_rule["rule_name"], "data_types")
+        self.assertEqual(type_rule["status"], "WARNING")
+        self.assertTrue(type_rule["summary"])
+        self.assertTrue(type_rule["actionable_message"])
 
 
 if __name__ == "__main__":

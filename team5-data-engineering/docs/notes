@@ -1,0 +1,18 @@
+### Data Quality Check — Employee Organization Hierarchy
+
+**Table:** `HumanResources.Employee`
+
+**Total records:** 290
+
+**Validation performed:** Checked `OrganizationNode` and `OrganizationLevel` for missing values and compared their presence across hierarchy levels.
+
+**Results:**
+- 289 employees have populated organization hierarchy fields.
+- 1 employee (BusinessEntityID 1, Chief Executive Officer) has NULL values in both fields.
+- All employees with populated organization levels (levels 1–4) have populated organization paths.
+
+**Status:** REVIEW
+
+**Interpretation:** The CEO's missing hierarchy fields may be an intentional root-level representation. Confirm the expected business rule before classifying this record as valid or invalid.
+
+**Data handling:** Do not modify or replace the NULL values during validation.

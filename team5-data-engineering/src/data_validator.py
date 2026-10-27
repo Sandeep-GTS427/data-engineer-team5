@@ -4,11 +4,16 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 
-def validate_csv(file_path, required_columns=None, expected_types=None):
+def validate_csv(
+    file_path,
+    required_columns=None,
+    expected_types=None,
+    max_file_size_mb=10,  # Temporary prototype default
+):
     """Validate CSV structure and basic data quality."""
 
     result = {
-        "file": str(file_path),
+        "file": Path(file_path).name,
         "status": "PASS",
         "rules": [],
         "row_count": 0,
@@ -63,9 +68,18 @@ def validate_csv(file_path, required_columns=None, expected_types=None):
                 "Provide a CSV containing a header and data rows."
             )
             return result
+        max_file_size_bytes = max_file_size_mb * 1024 * 1024
 
+        if path.stat().st_size > max_file_size_bytes:
+            fail(
+                "file_size_limit",
+                "CSV file exceeds the configured size limit.",
+                f"Upload a CSV smaller than or equal to "
+                f"{max_file_size_mb} MB."
+            )
+            return result
         with path.open("r", newline="", encoding="utf-8-sig") as csv_file:
-            reader = csv.DictReader(csv_file)
+            reader = csv.DictReader(csv_file,strict=True)
             columns = reader.fieldnames
 
             if not columns or not any(c and c.strip() for c in columns):
@@ -197,8 +211,8 @@ def validate_csv(file_path, required_columns=None, expected_types=None):
                     except (InvalidOperation, ValueError):
                         invalid_count += 1
                         message = (
-                            f"Row {row_number}, column '{column}': "
-                            f"expected {expected_type}, received '{value}'."
+                            f"Row {row_number}, column '{column}' contains an invalid value. "
+                            f"Expected type: {expected_type}. Please correct the value."
                         )
                         add_finding(
                             "data_types", "WARNING",
@@ -206,7 +220,6 @@ def validate_csv(file_path, required_columns=None, expected_types=None):
                             message,
                             row=row_number,
                             column=column,
-                            value=value,
                         )
 
             result["missing_value_count"] = missing_count
@@ -295,11 +308,12 @@ def validate_csv(file_path, required_columns=None, expected_types=None):
                     "No action required."
                 )
 
-    except (OSError, UnicodeError, csv.Error) as error:
+    except (OSError, UnicodeError, csv.Error):
         fail(
-            "csv_readable",
-            "CSV could not be read.",
-            f"Check file access and CSV formatting. Details: {error}"
-        )
+        "csv_readable",
+        "CSV could not be read.",
+        "Check that the file is accessible, correctly encoded, "
+        "and follows the required CSV format."
+    )
 
     return result

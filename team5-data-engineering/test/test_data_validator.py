@@ -3,6 +3,7 @@ import csv
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import result
 
 from src.data_validator import validate_csv
 
@@ -161,8 +162,9 @@ class TestValidateCSV(unittest.TestCase):
         self.assertEqual(result["findings"][0]["rule"], "data_types")
         self.assertEqual(result["findings"][0]["row"], 3)
         self.assertEqual(result["findings"][0]["column"], "age")
-        self.assertEqual(result["findings"][0]["value"], "abc")
-    
+        self.assertNotIn("value", result["findings"][0])
+        self.assertNotIn("abc", str(result["findings"][0]))
+
     def test_empty_column_detection(self):
         file_path = self.create_csv(
             "empty_column.csv",
@@ -203,6 +205,57 @@ class TestValidateCSV(unittest.TestCase):
         self.assertTrue(type_rule["summary"])
         self.assertTrue(type_rule["actionable_message"])
 
+    def test_file_exceeds_size_limit(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "large.csv"
+            file_path.write_text("id,name\n1,Alice\n", encoding="utf-8")
+
+            result = validate_csv(
+            file_path,
+            max_file_size_mb=0,
+        )
+
+            self.assertEqual(result["status"], "FAIL")
+            self.assertTrue(
+                any(
+                rule["rule"] == "file_size_limit"
+                and rule["status"] == "FAIL"
+                for rule in result["rules"]
+            )
+        )
+    def test_malformed_csv_quoting(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "malformed.csv"
+            file_path.write_text(
+                'id,name\n1,"Alice\n',
+                encoding="utf-8",
+            )
+
+            result = validate_csv(file_path)
+
+            self.assertEqual(result["status"], "FAIL")
+            self.assertTrue(
+                any(
+                    rule["rule"] == "csv_readable"
+                    and rule["status"] == "FAIL"
+                    for rule in result["rules"]
+                )
+            )
+    def test_invalid_encoding(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "invalid_encoding.csv"
+            file_path.write_bytes(b"\x80\x81\x82")
+
+            result = validate_csv(file_path)
+
+            self.assertEqual(result["status"], "FAIL")
+            self.assertTrue(
+                any(
+                    rule["rule"] == "csv_readable"
+                    and rule["status"] == "FAIL"
+                    for rule in result["rules"]
+                )
+            )
 
 if __name__ == "__main__":
     unittest.main()

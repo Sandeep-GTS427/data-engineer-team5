@@ -4,3 +4,9 @@ __pycache__/
 .venv/
 venv/
 .env
+# Environment files
+.env.*
+!.env.example
+
+# Local editor settings
+.vscode/

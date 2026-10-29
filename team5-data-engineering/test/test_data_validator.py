@@ -36,6 +36,28 @@ class TestValidateCSV(unittest.TestCase):
         file_path = self.temp_path / "missing.csv"
         result = validate_csv(file_path)
         self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(result["api_status"], "failed")
+
+        failed_rule = next(
+            rule for rule in result["rules"]
+            if rule["status"] == "FAIL"
+        )
+
+        self.assertIn("code", failed_rule)
+        self.assertTrue(failed_rule["code"])
+        self.assertIn("message", failed_rule)
+        self.assertTrue(failed_rule["message"])
+
+        self.assertEqual(result["api_status"], "failed")
+
+        failed_rule = next(
+            rule for rule in result["rules"]
+            if rule["status"] == "FAIL"
+        )
+
+        self.assertEqual(failed_rule["code"], "FILE_EXISTS")
+        self.assertIn("message", failed_rule)
+        self.assertTrue(failed_rule["message"])
 
     def test_empty_file(self):
         file_path = self.create_csv("empty.csv", "")
@@ -120,6 +142,15 @@ class TestValidateCSV(unittest.TestCase):
 
         self.assertEqual(result["invalid_type_count"], 0)
         self.assertEqual(result["status"], "PASS")
+    
+    def test_print_validation_response(self):
+        result = validate_csv("missing_sample.csv")
+        
+        import json
+        print("\nActual validation response:")
+        print(json.dumps(result, indent=2))
+
+        self.assertIsInstance(result, dict)
 
     def test_invalid_data_types(self):
         file_path = self.create_csv(
@@ -145,6 +176,7 @@ class TestValidateCSV(unittest.TestCase):
         self.assertEqual(type_rule["status"], "WARNING")
 
     
+    
     def test_invalid_type_finding_details(self):
         file_path = self.create_csv(
             "invalid_details.csv",
@@ -159,11 +191,21 @@ class TestValidateCSV(unittest.TestCase):
 
         self.assertEqual(result["invalid_type_count"], 1)
         self.assertEqual(len(result["findings"]), 1)
-        self.assertEqual(result["findings"][0]["rule"], "data_types")
-        self.assertEqual(result["findings"][0]["row"], 3)
-        self.assertEqual(result["findings"][0]["column"], "age")
-        self.assertNotIn("value", result["findings"][0])
-        self.assertNotIn("abc", str(result["findings"][0]))
+
+        finding = result["findings"][0]
+
+        self.assertEqual(finding["rule"], "data_types")
+        self.assertEqual(finding["row"], 3)
+        self.assertEqual(finding["column"], "age")
+        self.assertNotIn("value", finding)
+        self.assertNotIn("abc", str(finding))
+
+        # Verify the new structured finding fields
+        self.assertIn("code", finding)
+        self.assertEqual(finding["code"], "DATA_TYPES")
+        self.assertEqual(finding["field"], "age")
+        self.assertIn("message", finding)
+
 
     def test_empty_column_detection(self):
         file_path = self.create_csv(
@@ -256,6 +298,64 @@ class TestValidateCSV(unittest.TestCase):
                     for rule in result["rules"]
                 )
             )
+    
+    def test_api_status_success(self):
+        file_path = self.create_csv(
+            "api_success.csv",
+            "customer_id,name\n1,Asha\n2,Ravi\n"
+        )
 
+        result = validate_csv(
+            file_path,
+            required_columns=["customer_id", "name"]
+        )
+
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["api_status"], "success")
+
+    def test_api_status_warning(self):
+        file_path = self.create_csv(
+            "api_warning.csv",
+            "customer_id,name\n1,Asha\n2,   \n"
+        )
+
+        result = validate_csv(file_path)
+
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["api_status"], "warning")
+
+    def test_api_status_failed(self):
+        file_path = self.create_csv(
+            "api_failed.csv",
+            "customer_id\n1\n"
+        )
+
+        result = validate_csv(
+            file_path,
+            required_columns=["customer_id", "name"]
+        )
+
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(result["api_status"], "failed")
+    
+    def test_valid_string_data_type(self):
+        file_path = self.create_csv(
+            "valid_strings.csv",
+            "name\nAlice\nBob\nCharlie\n"
+        )
+
+        result = validate_csv(
+            file_path,
+            expected_types={"name": "string"}
+        )
+
+        self.assertEqual(result["invalid_type_count"], 0)
+        self.assertEqual(result["status"], "PASS")
+
+        type_rule = next(
+            rule for rule in result["rules"]
+            if rule["rule"] == "data_types"
+        )
+        self.assertEqual(type_rule["status"], "PASS")
 if __name__ == "__main__":
     unittest.main()

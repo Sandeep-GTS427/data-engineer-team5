@@ -10,6 +10,7 @@ def validate_csv(
     expected_types=None,
     max_file_size_mb=10,  # Temporary prototype default
 ):
+    
     """Validate CSV structure and basic data quality."""
 
     result = {
@@ -23,10 +24,15 @@ def validate_csv(
         "duplicate_row_count": 0,
         "invalid_type_count": 0,
         "findings": [],
+        "api_status": "success",
     }
 
     def add_rule(name, status, summary, message):
+        if status == "WARNING" and result["api_status"] == "success":
+            result["api_status"] = "warning"
+
         result["rules"].append({
+            "code": name.upper(),
             "rule": name,
             "rule_name": name,
             "status": status,
@@ -37,18 +43,33 @@ def validate_csv(
 
     def fail(name, summary, message):
         result["status"] = "FAIL"
+        result["api_status"] = "failed"
+
         add_rule(name, "FAIL", summary, message)
 
+    
     def add_finding(name, status, summary, message, **details):
-        result["findings"].append({
+        if status == "WARNING" and result["api_status"] == "success":
+            result["api_status"] = "warning"
+
+        finding = {
+            "code": name.upper(),
             "rule": name,
             "rule_name": name,
             "status": status,
             "summary": summary,
-            "actionable_message": message,
             "message": message,
-            **details,
-        })
+            "actionable_message": message,
+        }
+
+        # Include the affected field when a column is available.
+        if details.get("column"):
+            finding["field"] = details["column"]
+
+        # Preserve existing details such as row and column.
+        finding.update(details)
+
+        result["findings"].append(finding)
 
     path = Path(file_path)
 
@@ -114,7 +135,7 @@ def validate_csv(
             )
 
             expected_types = expected_types or {}
-            supported_types = {"integer", "number"}
+            supported_types = {"integer", "number","string"}
 
             unsupported = {
                 c: t for c, t in expected_types.items()
@@ -124,7 +145,7 @@ def validate_csv(
                 fail(
                     "expected_types",
                     "Unsupported data type configuration.",
-                    f"Use only integer or number. Invalid settings: {unsupported}"
+                    f"Use only integer, number, or string. Invalid settings: {unsupported}"
                 )
                 return result
 
@@ -199,15 +220,25 @@ def validate_csv(
                     if not value:
                         continue
 
+                    
                     try:
-                        number = Decimal(value)
-                        if not number.is_finite():
-                            raise ValueError("Value must be finite.")
-                        if (
-                            expected_type == "integer"
-                            and number != number.to_integral_value()
-                        ):
-                            raise ValueError("Value must be an integer.")
+                        if expected_type == "string":
+                            # CSV values are strings; reject empty values here
+                            if not value.strip():
+                                raise ValueError("Value must not be empty.")
+
+                        elif expected_type in {"integer", "number"}:
+                            number = Decimal(value)
+
+                            if not number.is_finite():
+                                raise ValueError("Value must be finite.")
+
+                            if (
+                                expected_type == "integer"
+                                and number != number.to_integral_value()
+                            ):
+                                raise ValueError("Value must be an integer.")
+
                     except (InvalidOperation, ValueError):
                         invalid_count += 1
                         message = (
@@ -275,6 +306,16 @@ def validate_csv(
                     f"Found {missing_count} blank or whitespace-only cells.",
                     "Review missing values and confirm which fields are mandatory."
                 )
+
+                for column, count in blank_counts.items():
+                    if count > 0:
+                        add_finding(
+                            "missing_values", "WARNING",
+                            f"Found {count} missing value(s) in column '{column}'.",
+                            f"Review the missing values in column '{column}'.",
+                            column=column,
+                            count=count
+                        )
             else:
                 add_rule(
                     "missing_values", "PASS",
@@ -287,6 +328,13 @@ def validate_csv(
                     "duplicate_rows", "WARNING",
                     f"Found {duplicate_count} duplicate rows.",
                     "Review duplicate records and remove them only if the business rules require it."
+                )
+
+                add_finding(
+                    "duplicate_rows", "WARNING",
+                    f"Found {duplicate_count} duplicate rows.",
+                    "Review the duplicate records and remove them only if required.",
+                    count=duplicate_count
                 )
             else:
                 add_rule(

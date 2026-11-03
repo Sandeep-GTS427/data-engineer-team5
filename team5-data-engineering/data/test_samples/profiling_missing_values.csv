@@ -1,0 +1,5 @@
+customer_id,name,age,salary,is_active
+1,Alice,25,45000.50,true
+2,,30,,false
+3,Charlie,,50000.00,true
+4,David,35,65000.25,

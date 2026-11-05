@@ -165,7 +165,22 @@ Result:
 - Status: success
 - Message: Team 5 Data Engineering API is running.
 
-### 10.7 Integration Test Summary
+### 10.7 Unknown Dataset ID Handling
+
+Test scenario: Dataset ID does not exist in PostgreSQL metadata.
+
+Request dataset ID: `non_existing_999`
+
+| Field | Result |
+|---|---|
+| Expected HTTP status | 404 |
+| Actual HTTP status | 404 |
+| Response message | Dataset not found. |
+| Result | PASS |
+
+The API correctly returned HTTP 404 when the requested dataset ID was not found in the metadata table. CSV validation was not started.
+
+### 10.8 Integration Test Summary
 
 | Test Scenario | Observed Result |
 |---|---|
@@ -175,15 +190,16 @@ Result:
 | Missing value | Warning |
 | Duplicate row | Warning |
 | API health | Success |
+| Unknown dataset ID | HTTP 404 |
 
 Note: The API currently performs CSV validation through the profile endpoint. The standalone data profiler is not yet integrated into this endpoint.
 
 ## 11. Updated Conclusion
 
-In addition to the four standalone profiling datasets, the FastAPI validation endpoint was tested with valid data, invalid type configuration, invalid data values, missing values, and duplicate rows.
+In addition to the four standalone profiling datasets, the FastAPI validation endpoint was tested with valid data, invalid type configuration, invalid data values, missing values, duplicate rows, and an unknown dataset ID.
 
-The API correctly returned success, failure, or warning outcomes according to the tested scenarios.
+The API correctly returned success, failure, warning, or HTTP 404 outcomes according to the tested scenarios. The API health endpoint was also verified successfully.
 
-All 33 automated regression tests also passed.
+All 33 automated regression tests passed.
 
 Large-dataset performance, profiler API integration, transformation implementation, and downstream AI/ML handoff remain pending verification.

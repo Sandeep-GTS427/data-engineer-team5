@@ -86,3 +86,104 @@ Result:
 The four profiling datasets and four failure-handling scenarios were successfully verified. The automated regression suite also passed all 33 tests.
 
 This document records the observed test evidence and does not claim that pending integration activities are complete.
+
+## 10. FastAPI Dataset Validation Integration Evidence
+
+The FastAPI endpoint `POST /api/v1/datasets/profile` was tested using Swagger UI and separately registered PostgreSQL dataset metadata.
+
+### 10.1 Valid Dataset
+
+| Field | Result |
+|---|---|
+| Dataset ID | customers_001 |
+| Dataset rows | 3 |
+| Dataset columns | 3 |
+| Validation status | PASS |
+| API status | success |
+
+All seven validation rules passed.
+
+### 10.2 Invalid Data Type Configuration
+
+| Field | Result |
+|---|---|
+| Dataset ID | customers_001 |
+| Configured age type | date |
+| Supported types | integer, number, string |
+| API status | failed |
+| Error code | EXPECTED_TYPES |
+
+The API correctly rejected the unsupported expected-type configuration.
+
+### 10.3 Invalid Data Value
+
+Test dataset: api_invalid_001
+
+| Field | Result |
+|---|---|
+| Invalid column | age |
+| Invalid value | unknown |
+| Expected type | integer |
+| Total rows | 3 |
+| Invalid type count | 1 |
+| API status | warning |
+
+The validator correctly identified the invalid value at row 3 in the age column.
+
+### 10.4 Missing-Value Detection
+
+Test dataset: api_missing_001
+
+| Field | Result |
+|---|---|
+| Total rows | 3 |
+| Total columns | 3 |
+| Missing column | name |
+| Missing value count | 1 |
+| API status | warning |
+
+The API correctly identified one missing value in the name column.
+
+### 10.5 Duplicate-Row Detection
+
+Test dataset: api_duplicates_001
+
+| Field | Result |
+|---|---|
+| Total rows | 3 |
+| Total columns | 3 |
+| Duplicate row count | 1 |
+| API status | warning |
+
+The validator correctly detected one duplicate row and returned a warning without automatically deleting records.
+
+### 10.6 API Health Verification
+
+Endpoint: GET /health
+
+Result:
+- Status: success
+- Message: Team 5 Data Engineering API is running.
+
+### 10.7 Integration Test Summary
+
+| Test Scenario | Observed Result |
+|---|---|
+| Valid dataset | Success |
+| Unsupported type configuration | Rejected |
+| Invalid data value | Warning |
+| Missing value | Warning |
+| Duplicate row | Warning |
+| API health | Success |
+
+Note: The API currently performs CSV validation through the profile endpoint. The standalone data profiler is not yet integrated into this endpoint.
+
+## 11. Updated Conclusion
+
+In addition to the four standalone profiling datasets, the FastAPI validation endpoint was tested with valid data, invalid type configuration, invalid data values, missing values, and duplicate rows.
+
+The API correctly returned success, failure, or warning outcomes according to the tested scenarios.
+
+All 33 automated regression tests also passed.
+
+Large-dataset performance, profiler API integration, transformation implementation, and downstream AI/ML handoff remain pending verification.

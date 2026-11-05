@@ -13,7 +13,7 @@ Track data engineering defects, technical limitations, integration dependencies,
 
 No confirmed software defects were identified during the Thursday regression, profiling, and API validation checks.
 
-All 33 automated tests passed. The four manual profiling datasets, four failure-handling scenarios, and five API validation scenarios were successfully verified.
+All 33 automated tests passed. The four manual profiling datasets, four failure-handling scenarios, and six API endpoint scenarios were successfully verified. The API health endpoint was also verified successfully.
 
 ## 3. Technical Limitations and Pending Verification
 
@@ -40,7 +40,7 @@ All 33 automated tests passed. The four manual profiling datasets, four failure-
 - Automated regression tests: 33 passed.
 - Standalone profiling datasets: 4 verified.
 - Failure-handling scenarios: 4 passed.
-- API integration scenarios: 5 verified.
+- API endpoint scenarios: 6 verified.
 - API health endpoint: Successful.
 - Confirmed defects: 0 identified during the checks.
 
@@ -51,6 +51,7 @@ All 33 automated tests passed. The four manual profiling datasets, four failure-
 3. Invalid data type value detection.
 4. Missing-value detection.
 5. Duplicate-row detection.
+6. Unknown dataset ID handling (HTTP 404).
 
 Note: The API profile endpoint currently performs dataset validation. The standalone profiler has not yet been integrated into the endpoint.
 

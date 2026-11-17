@@ -183,7 +183,7 @@ Pending coordination:
 | ID | Item | Status |
 |---|---|---|
 | DE-01 | Large CSV processing scalability | Performance testing pending |
-| DE-02 | Standalone profiler integration with FastAPI | Pending |
+| DE-02 | Standalone profiler integration with FastAPI | Resolved (Integrated into /profile endpoint) |
 | DE-03 | Actual data transformation pipeline | Requirements and implementation pending |
 | DE-04 | AI/ML data handoff | Team 1 confirmation pending |
 | DE-05 | Final API contract alignment | Team 2 confirmation pending |

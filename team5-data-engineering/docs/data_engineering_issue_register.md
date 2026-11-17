@@ -20,7 +20,7 @@ All 33 automated tests passed. The four manual profiling datasets, four failure-
 | ID | Item | Current Status | Required Action |
 |---|---|---|---|
 | DE-01 | Large CSV processing scalability | Not yet verified | Conduct large-dataset performance testing |
-| DE-02 | Profiler integration with FastAPI | Pending | Integrate standalone profiler with the API endpoint |
+| DE-02 | Profiler integration with FastAPI | Resolved | Integrated standalone profiler into POST /api/v1/datasets/profile endpoint |
 | DE-03 | Data transformation implementation | Pending requirements | Confirm transformation requirements with Team 1 and implement agreed functionality |
 | DE-04 | AI/ML data handoff | Pending external confirmation | Confirm expected dataset structure and handoff with Team 1 |
 | DE-05 | API contract alignment | Partially tested; final confirmation pending | Obtain approved request/response schema, file restrictions and error handling from Team 2 |

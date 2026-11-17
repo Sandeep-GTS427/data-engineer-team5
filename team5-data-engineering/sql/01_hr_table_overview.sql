@@ -1,6 +1,5 @@
--- USE AdventureWorks2025;
--- GO
-
+USE AdventureWorks2025;
+GO
 SELECT
     TABLE_SCHEMA,
     TABLE_NAME

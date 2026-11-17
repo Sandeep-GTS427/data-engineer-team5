@@ -1,10 +1,10 @@
 
 -- -- 1. Invalid department references
--- SELECT COUNT(*) AS InvalidDepartmentReferences
--- FROM HumanResources.EmployeeDepartmentHistory h
--- LEFT JOIN HumanResources.Department d
---     ON h.DepartmentID = d.DepartmentID
--- WHERE d.DepartmentID IS NULL;
+SELECT COUNT(*) AS InvalidDepartmentReferences
+FROM HumanResources.EmployeeDepartmentHistory h
+LEFT JOIN HumanResources.Department d
+    ON h.DepartmentID = d.DepartmentID
+WHERE d.DepartmentID IS NULL;
 
 -- -- 2. Invalid shift references
 -- SELECT COUNT(*) AS InvalidShiftReferences

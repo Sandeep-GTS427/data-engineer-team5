@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from src.data_profiler import profile_csv
 from src.data_validator import validate_csv
 
 load_dotenv()
@@ -61,8 +62,48 @@ def health_check():
     }
 
 
-@app.post("/api/v1/datasets/profile")
-def profile_dataset(request: ProfileRequest):
+@app.get("/api/v1/datasets")
+def list_datasets():
+    try:
+        with psycopg.connect(
+            host=os.getenv("DB_HOST"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+        ) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT dataset_id, dataset_name, file_format
+                    FROM dataset_metadata
+                    ORDER BY dataset_id
+                    """
+                )
+                rows = cursor.fetchall()
+                datasets = [
+                    {
+                        "dataset_id": row[0],
+                        "dataset_name": row[1],
+                        "file_format": row[2],
+                    }
+                    for row in rows
+                ]
+                return {
+                    "status": "success",
+                    "total_datasets": len(datasets),
+                    "datasets": datasets,
+                }
+
+    except psycopg.Error:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to retrieve dataset list from the database.",
+        )
+
+
+@app.post("/api/v1/datasets/validate")
+def validate_dataset(request: ProfileRequest):
     dataset_id = request.dataset_reference.dataset_id
 
     metadata = get_dataset_metadata(dataset_id)
@@ -91,4 +132,45 @@ def profile_dataset(request: ProfileRequest):
         "dataset_id": dataset_id,
         "dataset_name": dataset_name,
         "validation": validation_result,
+    }
+
+
+@app.post("/api/v1/datasets/profile")
+def profile_dataset(request: ProfileRequest):
+    dataset_id = request.dataset_reference.dataset_id
+
+    metadata = get_dataset_metadata(dataset_id)
+
+    if metadata is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset not found.",
+        )
+
+    dataset_id, dataset_name, file_path, file_format = metadata
+
+    if file_format.lower() != "csv":
+        raise HTTPException(
+            status_code=400,
+            detail="Only CSV datasets are supported.",
+        )
+
+    validation_result = validate_csv(
+        file_path,
+        expected_types=request.expected_types
+    )
+
+    profiling_result = None
+    if validation_result["status"] != "FAIL":
+        try:
+            profiling_result = profile_csv(file_path)
+        except Exception as exc:
+            profiling_result = {"error": str(exc)}
+
+    return {
+        "status": validation_result["api_status"],
+        "dataset_id": dataset_id,
+        "dataset_name": dataset_name,
+        "validation": validation_result,
+        "profiling": profiling_result,
     }
